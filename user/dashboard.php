@@ -187,20 +187,50 @@ $my_submissions = $stmt_my_items->fetchAll();
             margin: 0;
         }
         
+        /* Top Nav - Clean header without white background */
         .top-nav {
             position: fixed;
             top: 0;
             left: 260px;
             right: 0;
             height: 70px;
-            background: white;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 30px;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             z-index: 999;
-            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        /* Page title in header */
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            margin: 0;
+        }
+        
+        /* User badge in header */
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 8px 20px 8px 12px;
+            border-radius: 40px;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .user-badge i {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .user-badge span {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text);
         }
         
         .hamburger-btn {
@@ -213,15 +243,9 @@ $my_submissions = $stmt_my_items->fetchAll();
             gap: 20px;
         }
         
+        /* Hide logo in header since it's in sidebar */
         .logo {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: var(--primary);
-            text-decoration: none;
-        }
-        
-        .logo i {
-            margin-right: 8px;
+            display: none;
         }
         
         .search-container { 
@@ -344,26 +368,6 @@ $my_submissions = $stmt_my_items->fetchAll();
         
         .notif-item:hover { 
             background: #f8fafc; 
-        }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #f1f5f9;
-            padding: 5px 12px 5px 5px;
-            border-radius: 40px;
-        }
-        
-        .user-info img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-        }
-        
-        .user-info span {
-            font-weight: 600;
-            font-size: 0.85rem;
         }
         
         .grid { 
@@ -633,7 +637,7 @@ $my_submissions = $stmt_my_items->fetchAll();
 
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <i class="fas fa-microchip"></i> User<span style="color:var(--primary)">Panel</span>
+        <i class="fas fa-microchip"></i> TECH<span style="color:var(--primary)">STORE</span>
     </div>
     
     <a href="?view=home" class="nav-link <?= ($view == 'home') ? 'active' : '' ?>">
@@ -656,7 +660,14 @@ $my_submissions = $stmt_my_items->fetchAll();
 <header class="top-nav">
     <div class="nav-left-group">
         <button class="hamburger-btn" id="hamburgerBtn"><i class="fa-solid fa-bars-staggered"></i></button>
-        <a href="?view=home" class="logo"><i class="fa-solid fa-microchip"></i> TECH<span style="color:#0f172a">STORE</span></a>
+        <div class="page-title">
+            <?php 
+                if ($view == 'home') echo 'Dashboard';
+                elseif ($view == 'add') echo 'Suggest Product';
+                elseif ($view == 'my_items') echo 'My Submissions';
+                else echo 'Dashboard';
+            ?>
+        </div>
     </div>
             
     <?php if ($view == 'home'): ?>
@@ -699,9 +710,9 @@ $my_submissions = $stmt_my_items->fetchAll();
                 <?php endif; ?>
             </div>
         </div>
-        <div class="user-info">
-            <img src="https://ui-avatars.com/api/?name=<?= urlencode($_SESSION['name']) ?>&background=2563eb&color=fff" width="32" height="32" style="border-radius: 50%;">
-            <span><?= htmlspecialchars($_SESSION['name']) ?></span>
+        <div class="user-badge">
+            <i class="fas fa-user-circle"></i>
+            <span><?= htmlspecialchars($_SESSION['name']) ?> (Regular)</span>
         </div>
     </div>
 </header>
@@ -833,14 +844,12 @@ $my_submissions = $stmt_my_items->fetchAll();
                         </tr>
                     <?php else: ?>
                         <?php foreach($my_submissions as $ms): 
-                            // Clean product name - remove ™ and special characters
                             $clean_product_name = $ms['item_name'];
                             $clean_product_name = html_entity_decode($clean_product_name, ENT_QUOTES, 'UTF-8');
                             $clean_product_name = preg_replace('/[\x{2122}\x{00AE}\x{00A9}]/u', '', $clean_product_name);
                             $clean_product_name = str_replace(['™', '&#8482;', '&trade;', '®', '&#174;', '&reg;', '©', '&#169;', '&copy;'], '', $clean_product_name);
                             $clean_product_name = trim($clean_product_name);
                             
-                            // Clean brand name - remove TM and special characters
                             $clean_brand = $ms['brand'];
                             $clean_brand = html_entity_decode($clean_brand, ENT_QUOTES, 'UTF-8');
                             $clean_brand = preg_replace('/[\x{2122}\x{00AE}\x{00A9}]/u', '', $clean_brand);
