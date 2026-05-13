@@ -1,6 +1,4 @@
 <?php
-
-
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
@@ -112,7 +110,6 @@ $my_submissions = $stmt_my_items->fetchAll();
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg); display: flex; color: var(--text); min-height: 100vh; }
         
-        /* Sidebar - same as admin */
         .sidebar { 
             width: 260px; 
             background: var(--sidebar-bg); 
@@ -369,7 +366,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             font-size: 0.85rem;
         }
         
-        /* Grid & Cards */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
@@ -467,46 +463,67 @@ $my_submissions = $stmt_my_items->fetchAll();
         .items-table { 
             width: 100%; 
             border-collapse: collapse; 
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
         }
         
         .items-table th { 
             text-align: left; 
-            padding: 12px; 
-            background: #f8fafc; 
+            padding: 16px 20px; 
+            background: #f1f5f9; 
             font-size: 0.75rem; 
             text-transform: uppercase; 
-            color: #64748b; 
-            font-weight: 600;
+            color: #475569; 
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
         }
         
         .items-table td { 
-            padding: 15px 12px; 
-            border-bottom: 1px solid #f1f5f9; 
-            font-size: 0.9rem; 
+            padding: 18px 20px; 
+            border-bottom: 1px solid #e2e8f0; 
+            font-size: 0.9rem;
+            vertical-align: middle;
+            background: white;
+        }
+        
+        .items-table tr:hover td {
+            background: #f8fafc;
+        }
+        
+        .items-table tr:last-child td {
+            border-bottom: none;
         }
         
         .status-badge { 
-            padding: 4px 10px; 
-            border-radius: 20px; 
+            padding: 6px 14px; 
+            border-radius: 30px; 
             font-size: 0.7rem; 
             font-weight: 700; 
             text-transform: uppercase; 
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .status-approved { 
             background: #ecfdf5; 
             color: #047857; 
+            border: 1px solid #a7f3d0;
         }
         
         .status-rejected { 
             background: #fef2f2; 
             color: #b91c1c; 
+            border: 1px solid #fecaca;
         }
         
         .status-pending { 
             background: #fffbeb; 
             color: #b45309; 
+            border: 1px solid #fde68a;
         }
         
         .modal { 
@@ -572,7 +589,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             to { transform: translateY(0); opacity: 1; } 
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 left: -260px;
@@ -605,6 +621,10 @@ $my_submissions = $stmt_my_items->fetchAll();
             }
             .grid {
                 grid-template-columns: 1fr;
+            }
+            .items-table th,
+            .items-table td {
+                padding: 12px 15px;
             }
         }
     </style>
@@ -791,33 +811,74 @@ $my_submissions = $stmt_my_items->fetchAll();
         <div class="section-header">
             <h3>My Submissions</h3>
         </div>
-        <div style="overflow-x: auto;">
+        <div style="overflow-x: auto; border-radius: 16px;">
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th>Product</th>
+                        <th style="width: 60%;">Product</th>
                         <th>Category</th>
                         <th>Price</th>
-                        <th>Status</th>
+                        <th style="text-align: center;">Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($my_submissions as $ms): ?>
-                    <tr>
-                        <td style="display:flex; align-items:center; gap:15px;">
-                            <img src="../uploads/<?= htmlspecialchars($ms['item_image']) ?>" width="50" height="50" style="border-radius:10px; object-fit:cover;">
-                            <div>
-                                <div style="font-weight:700;"><?= htmlspecialchars($ms['item_name']) ?></div>
-                                <small style="color:#64748b;"><?= htmlspecialchars($ms['brand']) ?></small>
-                            </div>
-                        </td>
-                        <td style="font-weight:600;"><?= htmlspecialchars($ms['category']) ?></td>
-                        <td style="font-weight:700; color:#059669;">₱<?= number_format($ms['price'], 2) ?></td>
-                        <td>
-                            <span class="status-badge status-<?= $ms['status'] ?>"><?= $ms['status'] ?></span>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                    <?php if(empty($my_submissions)): ?>
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                                <i class="fas fa-box-open" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                You haven't submitted any product suggestions yet.
+                                <br>
+                                <a href="?view=add" style="color: var(--primary); text-decoration: none; font-weight: 600; margin-top: 10px; display: inline-block;">+ Suggest your first product</a>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach($my_submissions as $ms): 
+                            // Clean product name - remove ™ and special characters
+                            $clean_product_name = $ms['item_name'];
+                            $clean_product_name = html_entity_decode($clean_product_name, ENT_QUOTES, 'UTF-8');
+                            $clean_product_name = preg_replace('/[\x{2122}\x{00AE}\x{00A9}]/u', '', $clean_product_name);
+                            $clean_product_name = str_replace(['™', '&#8482;', '&trade;', '®', '&#174;', '&reg;', '©', '&#169;', '&copy;'], '', $clean_product_name);
+                            $clean_product_name = trim($clean_product_name);
+                            
+                            // Clean brand name - remove TM and special characters
+                            $clean_brand = $ms['brand'];
+                            $clean_brand = html_entity_decode($clean_brand, ENT_QUOTES, 'UTF-8');
+                            $clean_brand = preg_replace('/[\x{2122}\x{00AE}\x{00A9}]/u', '', $clean_brand);
+                            $clean_brand = str_replace(['™', '&#8482;', '&trade;', 'TM', '(TM)', '[TM]', '®', '&#174;', '&reg;', '©', '&#169;', '&copy;'], '', $clean_brand);
+                            $clean_brand = preg_replace('/\s*TM\s*$/i', '', $clean_brand);
+                            $clean_brand = trim($clean_brand);
+                        ?>
+                        <tr>
+                            <td style="display: flex; align-items: center; gap: 18px;">
+                                <img src="../uploads/<?= htmlspecialchars($ms['item_image']) ?>" width="55" height="55" style="border-radius: 12px; object-fit: cover; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <div style="font-weight: 700; font-size: 1rem; margin-bottom: 4px;"><?= htmlspecialchars($clean_product_name) ?></div>
+                                    <small style="color: #64748b; display: block; margin-top: 4px;"><?= htmlspecialchars($clean_brand) ?></small>
+                                </div>
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <span style="background: #f1f5f9; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #475569; white-space: nowrap;">
+                                    <i class="fas fa-tag" style="font-size: 0.7rem; margin-right: 4px;"></i>
+                                    <?= htmlspecialchars($ms['category']) ?>
+                                </span>
+                            </td>
+                            <td style="font-weight: 700; color: #059669; font-size: 1rem;">
+                                ₱<?= number_format($ms['price'], 2) ?>
+                            </td>
+                            <td style="text-align: center;">
+                                <?php if($ms['status'] == 'approved'): ?>
+                                    <span class="status-badge status-approved"><i class="fas fa-check-circle"></i> APPROVED</span>
+                                <?php elseif($ms['status'] == 'pending'): ?>
+                                    <span class="status-badge status-pending"><i class="fas fa-clock"></i> PENDING</span>
+                                <?php elseif($ms['status'] == 'rejected'): ?>
+                                    <span class="status-badge status-rejected"><i class="fas fa-times-circle"></i> REJECTED</span>
+                                <?php else: ?>
+                                    <span class="status-badge"><?= strtoupper($ms['status']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -895,7 +956,6 @@ $my_submissions = $stmt_my_items->fetchAll();
     if (catSelect) {
         catSelect.onchange = () => document.getElementById('filterForm').submit();
     }
-
 
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
