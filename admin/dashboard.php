@@ -1,21 +1,15 @@
 <?php
-// Prevent browser caching
-header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
+
 
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
-// Security Check with Remember Me
 checkRoleAccess('Admin');
 
 $message = "";
 $currentPage = $_GET['page'] ?? 'dashboard';
 
-// --- INTEGRATED ACTIONS (Direct Logic) ---
 
-// 1. User Actions (Archive/Restore)
 if (isset($_GET['action'])) {
     $id = $_GET['id'] ?? null;
     $public_id = $_GET['public_id'] ?? null;
@@ -32,7 +26,6 @@ if (isset($_GET['action'])) {
         header("Location: ?page=archived_users&msg=User Restored"); exit;
     }
 
-    // 2. Product Actions (Archive/Restore/Delete)
     if ($_GET['action'] == 'archive_item' && $public_id) {
         $pdo->prepare("UPDATE items SET status = 'archived' WHERE public_id = ?")->execute([$public_id]);
         logActivity($pdo, $_SESSION['user_id'], "Archived item: $public_id", "Inventory");
@@ -51,7 +44,6 @@ if (isset($_GET['action'])) {
     }
 }
 
-// --- FORM LOGIC (Add User / Add Item) ---
 if (isset($_POST['add_user'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) { die("CSRF validation failed!"); }
     $pw = password_hash($_POST['password'], PASSWORD_BCRYPT);
@@ -80,7 +72,6 @@ if (isset($_POST['reset_user_pw'])) {
     $message = "Password reset successful!";
 }
 
-// --- APPROVE/REJECT LOGIC ---
 if (isset($_GET['approve'])) {
     $pdo->prepare("UPDATE items SET status = 'approved' WHERE public_id = ?")->execute([$_GET['approve']]);
     header("Location: ?page=pending_approvals&msg=Approved"); exit;
@@ -90,7 +81,6 @@ if (isset($_GET['reject'])) {
     header("Location: ?page=pending_approvals&msg=Rejected"); exit;
 }
 
-// --- DATA FETCHING ---
 $users = $pdo->query("SELECT * FROM users WHERE role_id = 3 AND status = 'active'")->fetchAll();
 $archived_users = $pdo->query("SELECT * FROM users WHERE role_id = 3 AND status = 'archived'")->fetchAll();
 $items = $pdo->query("SELECT * FROM items WHERE status = 'approved'")->fetchAll();
@@ -98,7 +88,6 @@ $pending_items = $pdo->query("SELECT * FROM items WHERE status = 'pending'")->fe
 $archived_items = $pdo->query("SELECT * FROM items WHERE status = 'archived'")->fetchAll();
 $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->fetchAll();
 
-// --- ADDITIONAL STATS FOR DASHBOARD (Recent Activities and Low Stock) ---
 $recent_activities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 5")->fetchAll();
 $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AND status = 'approved' ORDER BY stock_quantity ASC LIMIT 5")->fetchAll();
 ?>
@@ -118,7 +107,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg); display: flex; color: var(--text); min-height: 100vh; }
         
-        /* Sidebar */
         .sidebar { width: 260px; background: var(--sidebar); position: fixed; height: 100vh; color: white; padding: 20px; }
         .nav-link { 
             display: flex; align-items: center; padding: 12px; color: #94a3b8; text-decoration: none; 
@@ -131,7 +119,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         .dropdown-container a { display: block; padding: 10px; color: #94a3b8; text-decoration: none; font-size: 0.9rem; }
         .dropdown-container a:hover { color: white; }
 
-        /* Main Content */
         .main { flex: 1; margin-left: 260px; padding: 40px; }
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-decoration: none; color: inherit; border-bottom: 4px solid #e2e8f0; transition: 0.2s; }
@@ -154,7 +141,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         .btn-warning { background: #fffbeb; color: #f59e0b; }
         .btn-info { background: #eff6ff; color: var(--info); }
 
-        /* Two Column Layout */
         .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
         .activity-list { list-style: none; }
         .activity-list li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
@@ -167,13 +153,11 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         
         input, select, textarea { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fcfdfe; }
         
-        /* Modal Overlays */
         .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; text-align: center; }
         .edit-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2100; padding: 20px; overflow-y: auto; }
         .edit-modal-content { background: white; padding: 25px 30px; border-radius: 15px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .two-columns { grid-template-columns: 1fr; gap: 20px; }
         }
@@ -243,9 +227,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
             </div>
         </div>
 
-        <!-- Row 2: Two Column Layout for Recent Activities and Low Stock -->
         <div class="two-columns">
-            <!-- Recent Activities Column -->
             <div class="glass-box">
                 <div class="section-header">
                     <h3><i class="fas fa-history"></i> Recent Activities</h3>
@@ -275,7 +257,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
                 <?php endif; ?>
             </div>
 
-            <!-- Low Stock Alert Column -->
             <div class="glass-box">
                 <div class="section-header">
                     <h3><i class="fas fa-exclamation-triangle"></i> Low Stock Alerts</h3>
@@ -313,7 +294,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
             </div>
         </div>
 
-        <!-- Row 3: Quick Actions -->
         <div class="glass-box">
             <div class="section-header">
                 <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
@@ -752,7 +732,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         document.getElementById('resetModal').style.display = 'flex';
     }
 
-    /* ARCHIVE MODAL */
     document.querySelectorAll(".openArchiveModal").forEach(btn => {
         btn.onclick = () => {
             const type = btn.dataset.type;
@@ -776,7 +755,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         }
     });
 
-    /* EDIT MODAL */
     document.querySelectorAll(".openEditModal").forEach(btn => {
         btn.onclick = () => {
             const modal = document.getElementById("editItemModal");
@@ -803,7 +781,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         }
     });
 
-    /* RESTORE MODAL */
     document.querySelectorAll(".openRestoreModal").forEach(btn => {
         btn.onclick = () => {
             const type = btn.dataset.type;
@@ -827,7 +804,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         }
     });
 
-    /* CLICK OUTSIDE MODAL TO CLOSE */
     window.onclick = (event) => {
         if (event.target.classList.contains("modal")) {
             closeModals();
@@ -842,9 +818,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         if (!isShown) drop.classList.add('show');
     }
 
-    // ============================================
-    // PREVENT BACK BUTTON AFTER LOGOUT
-    // ============================================
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
             window.location.reload();
