@@ -2,7 +2,6 @@
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
-// Security Check: Admin access only
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Admin') {
     header("Location: ../auth/login.php");
     exit;
@@ -11,7 +10,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Admin') {
 $p_id = $_GET['id'] ?? '';
 $message = "";
 
-// FETCH CURRENT DATA - Updated to join users to get the owner's name for logging
 $stmt = $pdo->prepare("
     SELECT i.*, u.firstname, u.lastname 
     FROM items i 
@@ -25,9 +23,7 @@ if (!$item) {
     die("Item not found!"); 
 }
 
-// UPDATE LOGIC
 if (isset($_POST['update'])) {
-    // CSRF PROTECTION
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         die("CSRF token validation failed!");
     }
@@ -41,7 +37,6 @@ if (isset($_POST['update'])) {
     $desc  = $_POST['description']; 
     $warn  = $_POST['warranty'];
 
-    // --- IMAGE UPDATE LOGIC ---
     $image_name = $item['item_image']; 
 
     if (isset($_FILES['item_image']) && $_FILES['item_image']['error'] === 0) {
@@ -55,11 +50,10 @@ if (isset($_POST['update'])) {
         }
     }
 
-    // UPDATED QUERY
+ 
     $stmt = $pdo->prepare("UPDATE items SET item_name = ?, brand = ?, category = ?, item_condition = ?, price = ?, stock_quantity = ?, description = ?, warranty = ?, item_image = ? WHERE public_id = ?");
     $stmt->execute([$name, $brand, $cat, $cond, $price, $stock, $desc, $warn, $image_name, $p_id]);
     
-    // --- NEW: ACTIVITY LOG ---
     $adminName = $_SESSION['firstname'] ?? $_SESSION['name'] ?? 'Admin';
     $ownerName = $item['firstname'] . " " . $item['lastname'];
     $logDetails = "Admin $adminName updated item '$name' (Owner: $ownerName)";
