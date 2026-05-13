@@ -1,23 +1,17 @@
 <?php
-// Prevent browser caching
-header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
+
 
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
-// --- ACCESS CONTROL with Remember Me ---
 checkRoleAccess('Regular');
 
-// --- CSRF TOKEN ---
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $msg = "";
 
-// --- ITEM SUBMISSION LOGIC ---
 if (isset($_POST['submit_item'])) {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die("Invalid CSRF token.");
@@ -65,13 +59,11 @@ if (isset($_POST['submit_item'])) {
 
 $view = $_GET['view'] ?? 'home';
 
-// --- NOTIFICATIONS ---
 $stmt_notify = $pdo->prepare("SELECT item_name, status FROM items WHERE added_by = ? AND status IN ('approved', 'rejected') ORDER BY id DESC LIMIT 5");
 $stmt_notify->execute([$_SESSION['user_id']]);
 $notifications = $stmt_notify->fetchAll();
 $notif_count = count($notifications);
 
-// --- FILTERS & SEARCH ---
 $search = trim($_GET['search'] ?? '');
 $cat_filter = trim($_GET['cat_filter'] ?? '');
 $query = "SELECT * FROM items WHERE status = 'approved'";
@@ -176,7 +168,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             font-size: 1rem;
         }
 
-        /* Main Content - Fixed top padding para hindi matakpan ng header */
         .main-wrapper { 
             flex: 1; 
             margin-left: 260px; 
@@ -199,7 +190,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             margin: 0;
         }
         
-        /* Top Nav - adjusted for sidebar */
         .top-nav {
             position: fixed;
             top: 0;
@@ -216,7 +206,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             border-bottom: 1px solid #e2e8f0;
         }
         
-        /* Hide hamburger button since we have fixed sidebar */
         .hamburger-btn {
             display: none;
         }
@@ -238,7 +227,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             margin-right: 8px;
         }
         
-        /* Search Container - Maayos na design */
         .search-container { 
             flex: 1; 
             max-width: 500px; 
@@ -419,7 +407,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             padding: 20px; 
         }
         
-        /* Forms */
         .form-section { 
             background: white; 
             padding: 30px; 
@@ -477,7 +464,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             transform: translateY(-2px); 
         }
         
-        /* Tables */
         .items-table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -499,7 +485,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             font-size: 0.9rem; 
         }
         
-        /* Status Badges */
         .status-badge { 
             padding: 4px 10px; 
             border-radius: 20px; 
@@ -524,7 +509,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             color: #b45309; 
         }
         
-        /* Modal */
         .modal { 
             display: none; 
             position: fixed; 
@@ -568,7 +552,6 @@ $my_submissions = $stmt_my_items->fetchAll();
             border-top: 1px solid #e2e8f0; 
         }
         
-        /* Alert message */
         .alert-success {
             background: #ecfdf5;
             color: #047857;
@@ -656,7 +639,6 @@ $my_submissions = $stmt_my_items->fetchAll();
         <a href="?view=home" class="logo"><i class="fa-solid fa-microchip"></i> TECH<span style="color:#0f172a">STORE</span></a>
     </div>
             
-    <!-- SEARCH BAR - LUMALABAS LANG SA HOME PAGE -->
     <?php if ($view == 'home'): ?>
     <form method="GET" class="search-container" id="filterForm">
         <select name="cat_filter" id="catSelect">
@@ -674,7 +656,6 @@ $my_submissions = $stmt_my_items->fetchAll();
         <input type="text" name="search" placeholder="Search products by name or brand..." value="<?= htmlspecialchars($search) ?>" id="searchInput">
     </form>
     <?php else: ?>
-    <!-- Empty div para mapanatili ang spacing -->
     <div style="flex: 1; max-width: 500px; margin: 0 30px;"></div>
     <?php endif; ?>
 
@@ -872,7 +853,6 @@ $my_submissions = $stmt_my_items->fetchAll();
 </style>
 
 <script>
-    // Sidebar toggle for mobile
     const hb = document.getElementById('hamburgerBtn');
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('sidebarOverlay');
@@ -891,7 +871,6 @@ $my_submissions = $stmt_my_items->fetchAll();
         };
     }
 
-    // Modal Specs logic
     const modal = document.getElementById('descModal');
     const readMoreBtns = document.querySelectorAll('.read-more');
     
@@ -912,27 +891,20 @@ $my_submissions = $stmt_my_items->fetchAll();
     
     window.onclick = (e) => { if(e.target == modal) modal.style.display = "none"; };
 
-    // Auto-submit search when category changes
     const catSelect = document.getElementById('catSelect');
     if (catSelect) {
         catSelect.onchange = () => document.getElementById('filterForm').submit();
     }
 
-    // ============================================
-    // PREVENT BACK BUTTON AFTER LOGOUT
-    // ============================================
-    
-    // Detect pageshow event (when page loads from cache/back button)
+
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
             window.location.reload();
         }
     });
     
-    // Push a new state to history
     history.pushState(null, null, location.href);
     
-    // Listen for popstate event (back/forward buttons)
     window.addEventListener('popstate', function() {
         window.location.reload();
     });
