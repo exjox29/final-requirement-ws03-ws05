@@ -97,6 +97,7 @@ $logs = $logStmt->fetchAll();
         
         .main { flex: 1; margin-left: 260px; padding: 40px; }
         
+        /* Page Header with User Badge */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .page-header h1 { font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0; }
         .user-badge { display: flex; align-items: center; gap: 12px; background: white; padding: 8px 20px 8px 12px; border-radius: 40px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
