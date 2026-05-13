@@ -97,6 +97,10 @@ $items = $pdo->query("SELECT * FROM items WHERE status = 'approved'")->fetchAll(
 $pending_items = $pdo->query("SELECT * FROM items WHERE status = 'pending'")->fetchAll();
 $archived_items = $pdo->query("SELECT * FROM items WHERE status = 'archived'")->fetchAll();
 $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->fetchAll();
+
+// --- ADDITIONAL STATS FOR DASHBOARD (Recent Activities and Low Stock) ---
+$recent_activities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 5")->fetchAll();
+$low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AND status = 'approved' ORDER BY stock_quantity ASC LIMIT 5")->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -110,7 +114,7 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #4f46e5; --sidebar: #0f172a; --bg: #f8fafc; --white: #ffffff; --text: #1e293b; --danger: #ef4444; }
+        :root { --primary: #4f46e5; --sidebar: #0f172a; --bg: #f8fafc; --white: #ffffff; --text: #1e293b; --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --info: #3b82f6; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg); display: flex; color: var(--text); min-height: 100vh; }
         
@@ -132,7 +136,7 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-decoration: none; color: inherit; border-bottom: 4px solid #e2e8f0; transition: 0.2s; }
         .stat-card:hover { transform: translateY(-3px); border-bottom-color: var(--primary); }
-        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
         .stat-card .num { font-size: 2rem; font-weight: 800; display: block; margin-top: 5px; }
         
         .glass-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 30px; }
@@ -148,38 +152,32 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
         .btn-danger { background: #fef2f2; color: var(--danger); }
         .btn-success { background: #f0fdf4; color: #166534; }
         .btn-warning { background: #fffbeb; color: #f59e0b; }
+        .btn-info { background: #eff6ff; color: var(--info); }
 
+        /* Two Column Layout */
+        .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .activity-list { list-style: none; }
+        .activity-list li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+        .activity-list li:last-child { border-bottom: none; }
+        .activity-icon { width: 32px; height: 32px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .activity-detail { flex: 1; }
+        .activity-detail strong { display: block; font-size: 0.85rem; }
+        .activity-detail small { font-size: 0.7rem; color: #94a3b8; }
+        .badge-low-stock { background: #fef2f2; color: #dc2626; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
         
         input, select, textarea { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fcfdfe; }
+        
         /* Modal Overlays */
         .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; text-align: center; }
-        /* Unique styles for edit modal */
-        .edit-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(4px);
-            justify-content: center;
-            align-items: center;
-            z-index: 2100;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .edit-modal-content {
-            background: white;
-            padding: 25px 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        .edit-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2100; padding: 20px; overflow-y: auto; }
+        .edit-modal-content { background: white; padding: 25px 30px; border-radius: 15px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .two-columns { grid-template-columns: 1fr; gap: 20px; }
         }
     </style>
-
 </head>
 <body>
 
@@ -221,11 +219,122 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
     <?php endif; ?>
 
     <?php if($currentPage == 'dashboard'): ?>
+        <!-- Row 1: Main Stats Cards (4 cards) -->
         <div class="grid-stats">
-            <div class="stat-card"><h3>Active Inventory</h3><span class="num"><?= count($items) ?></span></div>
-            <div class="stat-card"><h3>Pending</h3><span class="num" style="color:#f59e0b"><?= count($pending_items) ?></span></div>
-            <div class="stat-card"><h3>Total Customers</h3><span class="num"><?= count($users) ?></span></div>
-            <div class="stat-card"><h3>Archived Items</h3><span class="num"><?= count($archived_items) ?></span></div>
+            <div class="stat-card">
+                <h3><i class="fas fa-boxes"></i> Active Inventory</h3>
+                <span class="num"><?= count($items) ?></span>
+                <small>Total products in stock</small>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-clock"></i> Pending Approvals</h3>
+                <span class="num" style="color:#f59e0b"><?= count($pending_items) ?></span>
+                <small>Items waiting for review</small>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-users"></i> Total Customers</h3>
+                <span class="num"><?= count($users) ?></span>
+                <small>Active registered users</small>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-archive"></i> Archived Items</h3>
+                <span class="num"><?= count($archived_items) ?></span>
+                <small>Items in recycle bin</small>
+            </div>
+        </div>
+
+        <!-- Row 2: Two Column Layout for Recent Activities and Low Stock -->
+        <div class="two-columns">
+            <!-- Recent Activities Column -->
+            <div class="glass-box">
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> Recent Activities</h3>
+                </div>
+                <?php if(empty($recent_activities)): ?>
+                    <p style="color:#94a3b8; text-align: center; padding: 20px;">No recent activities</p>
+                <?php else: ?>
+                    <ul class="activity-list">
+                        <?php foreach($recent_activities as $activity): ?>
+                        <li>
+                            <div class="activity-icon">
+                                <?php if($activity['action_type'] == 'Inventory'): ?>
+                                    <i class="fas fa-box" style="color: var(--primary);"></i>
+                                <?php elseif($activity['action_type'] == 'User Management'): ?>
+                                    <i class="fas fa-user" style="color: var(--success);"></i>
+                                <?php else: ?>
+                                    <i class="fas fa-shield-alt" style="color: var(--warning);"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="activity-detail">
+                                <strong><?= htmlspecialchars($activity['action_details']) ?></strong>
+                                <small><?= date('M d, Y h:i A', strtotime($activity['created_at'])) ?></small>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </div>
+
+            <!-- Low Stock Alert Column -->
+            <div class="glass-box">
+                <div class="section-header">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Low Stock Alerts</h3>
+                </div>
+                <?php if(empty($low_stock_items)): ?>
+                    <p style="color:#94a3b8; text-align: center; padding: 20px;">
+                        <i class="fas fa-check-circle" style="color: var(--success); font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                        All items have sufficient stock
+                    </p>
+                <?php else: ?>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Current Stock</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($low_stock_items as $item): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($item['item_name']) ?></strong><br>
+                                        <small style="color:#64748b"><?= htmlspecialchars($item['brand']) ?></small>
+                                    </td>
+                                    <td style="font-weight: 700; color: #dc2626;"><?= $item['stock_quantity'] ?> left</td>
+                                    <td><span class="badge-low-stock"><i class="fas fa-bell"></i> Low Stock</span></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Row 3: Quick Actions -->
+        <div class="glass-box">
+            <div class="section-header">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                <a href="?page=add_products" class="btn btn-primary" style="justify-content: center; padding: 12px;">
+                    <i class="fas fa-plus-circle"></i> Add New Product
+                </a>
+                <a href="?page=all_users" class="btn btn-info" style="justify-content: center; padding: 12px; background: #eff6ff; color: #2563eb;">
+                    <i class="fas fa-user-plus"></i> Create User
+                </a>
+                <a href="?page=pending_approvals" class="btn btn-warning" style="justify-content: center; padding: 12px;">
+                    <i class="fas fa-check-double"></i> Review Pending
+                    <?php if(count($pending_items) > 0): ?>
+                        <span style="background: #ef4444; color: white; border-radius: 20px; padding: 2px 8px; font-size: 0.7rem;"><?= count($pending_items) ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="?page=archived_products" class="btn btn-danger" style="justify-content: center; padding: 12px;">
+                    <i class="fas fa-trash-restore"></i> Manage Archive
+                </a>
+            </div>
         </div>
 
     <?php elseif($currentPage == 'all_products'): ?>
@@ -251,7 +360,11 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
                             <td><img src="../uploads/<?= $i['item_image'] ?>" class="thumb"></td>
                             <td><strong><?= htmlspecialchars($i['item_name']) ?></strong><br><small style="color:#64748b"><?= $i['brand'] ?></small></td>
                             <td>₱<?= number_format($i['price'], 2) ?></td>
-                            <td><?= $i['stock_quantity'] ?></td>
+                            <td><?= $i['stock_quantity'] ?> 
+                                <?php if($i['stock_quantity'] <= 5): ?>
+                                    <span class="badge-low-stock" style="margin-left: 5px;">Low</span>
+                                <?php endif; ?>
+                            </td>
                             <td style="text-align: right;">
                                 <button class="btn btn-success openEditModal" 
                                         data-id="<?= $i['public_id'] ?>"
@@ -343,7 +456,7 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
                             <td style="text-align: right;">
                                 <a href="?approve=<?= $p['public_id'] ?>" class="btn btn-primary" style="margin-right: 5px;">Approve</a>
                                 <a href="?reject=<?= $p['public_id'] ?>" class="btn btn-danger">Reject</a>
-                            </td>
+                            <td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -432,7 +545,7 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
                                     <i class="fas fa-archive"></i> Archive
                                 </button>
                             </td>
-                        </tr>
+                        </table>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -448,39 +561,24 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Image</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Item Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Brand</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Category</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Price</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Action</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Image</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Item Name</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Brand</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Category</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Price</th>
+                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach($archived_items as $ai): ?>
                         <tr>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <img src="../uploads/<?= htmlspecialchars($ai['item_image']) ?>" width="50" height="50" style="border-radius: 8px; object-fit: cover;">
-                             </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
-                                <?= htmlspecialchars($ai['item_name']) ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <?= htmlspecialchars($ai['brand']) ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;">
-                                    <?= htmlspecialchars($ai['category']) ?>
-                                </span>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #059669;">
-                                ₱<?= number_format($ai['price'], 2) ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; text-align: right;">
-                                <button class="btn btn-success openRestoreModal"
-                                        data-type="item"
-                                        data-id="<?= $ai['public_id'] ?>"
-                                        style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
+                            <td><img src="../uploads/<?= htmlspecialchars($ai['item_image']) ?>" width="50" height="50" style="border-radius: 8px; object-fit: cover;"></td>
+                            <td style="font-weight: 600;"><?= htmlspecialchars($ai['item_name']) ?></td>
+                            <td><?= htmlspecialchars($ai['brand']) ?></td>
+                            <td><span style="background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;"><?= htmlspecialchars($ai['category']) ?></span></td>
+                            <td style="font-weight: 700; color: #059669;">₱<?= number_format($ai['price'], 2) ?></td>
+                            <td style="text-align: right;">
+                                <button class="btn btn-success openRestoreModal" data-type="item" data-id="<?= $ai['public_id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
                                     <i class="fas fa-undo"></i> Restore
                                 </button>
                             </td>
@@ -508,38 +606,23 @@ $rejected_items = $pdo->query("SELECT * FROM items WHERE status = 'rejected'")->
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">#</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Full Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Email Address</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Status</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Action</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">#</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Full Name</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email Address</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Status</th>
+                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php $counter = 1; ?>
                         <?php foreach($archived_users as $au): ?>
                         <tr>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 50px;">
-                                <?= $counter++ ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;">
-                                <i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 8px;"></i>
-                                <?= htmlspecialchars($au['firstname'].' '.$au['lastname']) ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <i class="fas fa-envelope" style="color: #94a3b8; margin-right: 8px;"></i>
-                                <?= htmlspecialchars($au['email']) ?>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;">
-                                    <i class="fas fa-ban"></i> ARCHIVED
-                                </span>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; text-align: right;">
-                                <button class="btn btn-success openRestoreModal"
-                                        data-type="user"
-                                        data-id="<?= $au['id'] ?>"
-                                        style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
+                            <td style="color: #64748b; width: 50px;"><?= $counter++ ?></td>
+                            <td style="font-weight: 600;"><i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 8px;"></i><?= htmlspecialchars($au['firstname'].' '.$au['lastname']) ?></td>
+                            <td><i class="fas fa-envelope" style="color: #94a3b8; margin-right: 8px;"></i><?= htmlspecialchars($au['email']) ?></td>
+                            <td><span style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;"><i class="fas fa-ban"></i> ARCHIVED</span></td>
+                            <td style="text-align: right;">
+                                <button class="btn btn-success openRestoreModal" data-type="user" data-id="<?= $au['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
                                     <i class="fas fa-undo"></i> Restore
                                 </button>
                             </td>
