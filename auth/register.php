@@ -12,9 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $ln = trim($_POST['lastname']);
     $em = trim($_POST['email']);
     $pw = password_hash($_POST['password'], PASSWORD_BCRYPT);
-    $role_id = 3; // Regular User ID
+    $role_id = 3; 
 
-    // Basic validation
     if (empty($fn) || empty($ln) || empty($em) || empty($_POST['password'])) {
         $error = "Please fill in all fields.";
     } elseif (!filter_var($em, FILTER_VALIDATE_EMAIL)) {
@@ -26,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt = $pdo->prepare("INSERT INTO users (firstname, lastname, email, password, role_id, status) VALUES (?, ?, ?, ?, ?, 'active')");
             $stmt->execute([$fn, $ln, $em, $pw, $role_id]);
             $message = "Registration successful!";
-            // Clear form after successful registration
             $fn = $ln = $em = "";
         } catch (Exception $e) {
             $error = "Email address is already registered.";
@@ -240,7 +238,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             text-decoration: underline;
         }
 
-        /* Password hint */
         .password-hint {
             font-size: 0.7rem;
             color: #94a3b8;
