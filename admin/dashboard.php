@@ -7,6 +7,17 @@ checkRoleAccess('Admin');
 $message = "";
 $currentPage = $_GET['page'] ?? 'dashboard';
 
+// Define page titles
+$pageTitles = [
+    'dashboard' => 'Dashboard',
+    'all_products' => 'All Products',
+    'add_products' => 'Add Product',
+    'pending_approvals' => 'Pending Approvals',
+    'all_users' => 'All Users',
+    'archived_products' => 'Archived Products',
+    'archived_users' => 'Archived Users'
+];
+$pageTitle = $pageTitles[$currentPage] ?? 'Dashboard';
 
 if (isset($_GET['action'])) {
     $id = $_GET['id'] ?? null;
@@ -97,7 +108,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Admin Dashboard | Computer Store</title>
+    <title>Admin Dashboard | <?= $pageTitle ?> | TechStore</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -118,6 +129,12 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         .dropdown-container a:hover { color: white; }
 
         .main { flex: 1; margin-left: 260px; padding: 40px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .page-header h1 { font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0; }
+        .user-badge { display: flex; align-items: center; gap: 12px; background: white; padding: 8px 20px 8px 12px; border-radius: 40px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .user-badge i { font-size: 1.2rem; color: var(--primary); }
+        .user-badge span { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+        
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-decoration: none; color: inherit; border-bottom: 4px solid #e2e8f0; transition: 0.2s; }
         .stat-card:hover { transform: translateY(-3px); border-bottom-color: var(--primary); }
@@ -158,6 +175,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         
         @media (max-width: 768px) {
             .two-columns { grid-template-columns: 1fr; gap: 20px; }
+            .page-header { flex-direction: column; gap: 15px; align-items: flex-start; }
         }
     </style>
 </head>
@@ -165,7 +183,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
 
 <div class="sidebar">
     <h2 style="margin-bottom: 35px; font-weight: 800; display:flex; align-items:center; gap:10px;">
-        <i class="fas fa-microchip" style="color:var(--primary)"></i> TechAdmin
+        <i class="fas fa-microchip" style="color:var(--primary)"></i> TECH<span style="color:var(--primary)">STORE</span>
     </h2>
     
     <a href="?page=dashboard" class="nav-link <?= $currentPage=='dashboard'?'active':'' ?>">
@@ -194,6 +212,14 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
 </div>
 
 <div class="main">
+    <div class="page-header">
+        <h1><?= $pageTitle ?></h1>
+        <div class="user-badge">
+            <i class="fas fa-user-circle"></i>
+            <span><?= htmlspecialchars($_SESSION['name']) ?> (Admin)</span>
+        </div>
+    </div>
+
     <?php if(isset($_GET['msg']) || $message): ?>
         <div style="background: #dcfce7; color: #166534; padding: 15px; border-radius: 12px; margin-bottom: 25px; font-weight: 600; border: 1px solid #bbf7d0;">
             <i class="fas fa-circle-check"></i> &nbsp; <?= $message ?: $_GET['msg'] ?>
@@ -601,41 +627,54 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
     <?php elseif($currentPage == 'archived_users'): ?>
         <div class="glass-box">
             <div class="section-header">
-                <h3>Disabled Accounts</h3>
+                <h3><i class="fas fa-user-slash"></i> Disabled Accounts</h3>
             </div>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div style="overflow-x: auto; border-radius: 16px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">#</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Full Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email Address</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Status</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">#</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Full Name</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Email Address</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Status</th>
+                            <th style="text-align: right; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php $counter = 1; ?>
-                        <?php foreach($archived_users as $au): ?>
-                        <tr>
-                            <td style="color: #64748b; width: 50px;"><?= $counter++ ?></td>
-                            <td style="font-weight: 600;"><i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 8px;"></i><?= htmlspecialchars($au['firstname'].' '.$au['lastname']) ?></td>
-                            <td><i class="fas fa-envelope" style="color: #94a3b8; margin-right: 8px;"></i><?= htmlspecialchars($au['email']) ?></td>
-                            <td><span style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;"><i class="fas fa-ban"></i> ARCHIVED</span></td>
-                            <td style="text-align: right;">
-                                <button class="btn btn-success openRestoreModal" data-type="user" data-id="<?= $au['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
-                                    <i class="fas fa-undo"></i> Restore
-                                </button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
                         <?php if(empty($archived_users)): ?>
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px; color: #94a3b8;">
-                                <i class="fas fa-users-slash" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
-                                No archived users found.
-                            </td>
-                        </tr>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                                    <i class="fas fa-user-check" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                    No disabled accounts found.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php $counter = 1; ?>
+                            <?php foreach($archived_users as $au): ?>
+                            <tr>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #64748b; width: 50px;">
+                                    <?= $counter++ ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-weight: 600;">
+                                    <i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($au['firstname'].' '.$au['lastname']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <i class="fas fa-envelope" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($au['email']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <span style="background: #fef2f2; color: #dc2626; padding: 6px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-ban"></i> DISABLED
+                                    </span>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; text-align: right;">
+                                    <button class="btn btn-success openRestoreModal" data-type="user" data-id="<?= $au['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
+                                        <i class="fas fa-undo"></i> Restore
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -793,7 +832,6 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
         }
     });
 
-    /* DELETE MODAL */
     document.querySelectorAll(".openDeleteModal").forEach(btn => {
         btn.onclick = () => {
             const id = btn.dataset.id;
