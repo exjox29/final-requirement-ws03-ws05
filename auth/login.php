@@ -226,6 +226,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             transform: translateY(0);
         }
 
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .register-link p {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .register-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -269,6 +291,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <span>Login</span>
             </button>
         </form>
+
+        <div class="register-link">
+            <p>Don't have an account? <a href="register.php">Register here</a></p>
+        </div>
     </div>
 </div>
 
