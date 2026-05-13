@@ -1,24 +1,20 @@
 <?php
-// Prevent browser caching
-header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Wed, 11 Jan 1984 05:00:00 GMT");
 
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
-// Security Check with Remember Me
 checkRoleAccess('Super Admin');
 
 $message = "";
 $view = $_GET['view'] ?? 'home'; 
 
-// --- STATS FOR HOME DASHBOARD ---
 $totalAdmins = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2 AND status = 'active'")->fetchColumn();
 $archivedAdmins = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 2 AND status = 'archived'")->fetchColumn();
 $totalLogs = $pdo->query("SELECT COUNT(*) FROM activity_logs")->fetchColumn();
 
-// --- LOGIC: RESET ADMIN PASSWORD ---
+$totalRegularUsers = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 3 AND status = 'active'")->fetchColumn();
+$recentActivities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 5")->fetchAll();
+
 if (isset($_POST['reset_pw'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) { die("CSRF validation failed!"); }
     $id = $_POST['user_id'];
@@ -33,7 +29,6 @@ if (isset($_POST['reset_pw'])) {
     $message = "Password for $targetName reset successfully!";
 }
 
-// --- LOGIC: ADD ADMIN ---
 if (isset($_POST['add_admin'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) { die("CSRF validation failed!"); }
     $fn = $_POST['firstname']; $ln = $_POST['lastname']; $em = $_POST['email'];
@@ -46,7 +41,6 @@ if (isset($_POST['add_admin'])) {
     } catch (Exception $e) { $message = "Error: Email already exists."; }
 }
 
-// --- LOGIC: ARCHIVE/RESTORE ---
 if (isset($_GET['archive'])) {
     $pdo->prepare("UPDATE users SET status = 'archived' WHERE id = ? AND role_id = 2")->execute([$_GET['archive']]);
     header("Location: ?view=manage_admins&msg=Archived"); exit;
@@ -56,11 +50,9 @@ if (isset($_GET['restore'])) {
     header("Location: ?view=archived_admins&msg=Restored"); exit;
 }
 
-// --- DATA FETCHING ---
 $admins = $pdo->query("SELECT * FROM users WHERE role_id = 2 AND status = 'active'")->fetchAll();
 $archived_list = $pdo->query("SELECT * FROM users WHERE role_id = 2 AND status = 'archived'")->fetchAll();
 
-// --- PAGINATION FOR LOGS ---
 $limit = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
@@ -82,7 +74,7 @@ $logs = $logStmt->fetchAll();
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #4f46e5; --sidebar: #0f172a; --bg: #f8fafc; --white: #ffffff; --text: #1e293b; --danger: #ef4444; }
+        :root { --primary: #4f46e5; --sidebar: #0f172a; --bg: #f8fafc; --white: #ffffff; --text: #1e293b; --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --info: #3b82f6; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: var(--bg); display: flex; color: var(--text); min-height: 100vh; }
         
@@ -99,10 +91,14 @@ $logs = $logStmt->fetchAll();
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-bottom: 4px solid #e2e8f0; transition: 0.2s; }
         .stat-card:hover { transform: translateY(-3px); border-bottom-color: var(--primary); }
-        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card h3 { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
         .stat-card .num { font-size: 2rem; font-weight: 800; display: block; margin-top: 5px; }
+        .stat-card small { font-size: 0.7rem; color: #94a3b8; }
         
         .glass-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .section-header { margin-bottom: 20px; }
+        .section-header h3 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th { text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
@@ -112,11 +108,27 @@ $logs = $logStmt->fetchAll();
         .btn-danger { background: #fef2f2; color: var(--danger); }
         .btn-warning { background: #fffbeb; color: #f59e0b; }
         .btn-success { background: #f0fdf4; color: #166534; }
+        .btn-info { background: #eff6ff; color: var(--info); }
         
         input, select { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #e2e8f0; border-radius: 10px; }
+        
+        /* Two Column Layout */
+        .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .activity-list { list-style: none; }
+        .activity-list li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+        .activity-list li:last-child { border-bottom: none; }
+        .activity-icon { width: 32px; height: 32px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .activity-detail { flex: 1; }
+        .activity-detail strong { display: block; font-size: 0.85rem; }
+        .activity-detail small { font-size: 0.7rem; color: #94a3b8; }
 
         .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; text-align: center; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .two-columns { grid-template-columns: 1fr; gap: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -145,14 +157,110 @@ $logs = $logStmt->fetchAll();
     <?php endif; ?>
 
     <?php if ($view === 'home'): ?>
+        <!-- Row 1: Main Stats Cards (4 cards) -->
         <div class="grid-stats">
-            <div class="stat-card"><h3>Active Admins</h3><span class="num"><?= $totalAdmins ?></span></div>
-            <div class="stat-card" style="border-bottom-color:var(--danger)"><h3>Archived</h3><span class="num"><?= $archivedAdmins ?></span></div>
-            <div class="stat-card" style="border-bottom-color:#f59e0b"><h3>Total Logs</h3><span class="num"><?= $totalLogs ?></span></div>
+            <div class="stat-card">
+                <h3><i class="fas fa-user-shield"></i> Active Admins</h3>
+                <span class="num"><?= $totalAdmins ?></span>
+                <small>Active administrators</small>
+            </div>
+            <div class="stat-card" style="border-bottom-color:var(--danger)">
+                <h3><i class="fas fa-archive"></i> Archived Admins</h3>
+                <span class="num"><?= $archivedAdmins ?></span>
+                <small>Disabled admin accounts</small>
+            </div>
+            <div class="stat-card" style="border-bottom-color:var(--warning)">
+                <h3><i class="fas fa-history"></i> Total Logs</h3>
+                <span class="num"><?= $totalLogs ?></span>
+                <small>System activity records</small>
+            </div>
+            <div class="stat-card" style="border-bottom-color:var(--info)">
+                <h3><i class="fas fa-users"></i> Regular Users</h3>
+                <span class="num"><?= $totalRegularUsers ?></span>
+                <small>Active customers</small>
+            </div>
         </div>
+
+        <div class="two-columns">
+            <!-- Recent Activities Column -->
+            <div class="glass-box">
+                <div class="section-header">
+                    <h3><i class="fas fa-history"></i> Recent Activities</h3>
+                </div>
+                <?php if(empty($recentActivities)): ?>
+                    <p style="color:#94a3b8; text-align: center; padding: 20px;">No recent activities</p>
+                <?php else: ?>
+                    <ul class="activity-list">
+                        <?php foreach($recentActivities as $activity): ?>
+                        <li>
+                            <div class="activity-icon">
+                                <?php if($activity['action_type'] == 'Inventory'): ?>
+                                    <i class="fas fa-box" style="color: var(--primary);"></i>
+                                <?php elseif($activity['action_type'] == 'User Management'): ?>
+                                    <i class="fas fa-user" style="color: var(--success);"></i>
+                                <?php else: ?>
+                                    <i class="fas fa-shield-alt" style="color: var(--warning);"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="activity-detail">
+                                <strong><?= htmlspecialchars($activity['action_details']) ?></strong>
+                                <small><?= date('M d, Y h:i A', strtotime($activity['created_at'])) ?></small>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </div>
+
+            <!-- System Overview Column -->
+            <div class="glass-box">
+                <div class="section-header">
+                    <h3><i class="fas fa-chart-line"></i> System Overview</h3>
+                </div>
+                <div style="text-align: center; padding: 10px;">
+                    <div style="margin-bottom: 20px;">
+                        <i class="fas fa-microchip" style="font-size: 3rem; color: var(--primary);"></i>
+                        <p style="margin-top: 10px; color: #64748b;">TechStore Inventory Management System</p>
+                    </div>
+                    <hr style="margin: 20px 0; border-color: #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left;">
+                        <div>
+                            <small style="color: #94a3b8;">Total Admins</small>
+                            <strong style="display: block; font-size: 1.2rem;"><?= $totalAdmins ?></strong>
+                        </div>
+                        <div>
+                            <small style="color: #94a3b8;">Archived Admins</small>
+                            <strong style="display: block; font-size: 1.2rem; color: var(--danger);"><?= $archivedAdmins ?></strong>
+                        </div>
+                        <div>
+                            <small style="color: #94a3b8;">Regular Users</small>
+                            <strong style="display: block; font-size: 1.2rem;"><?= $totalRegularUsers ?></strong>
+                        </div>
+                        <div>
+                            <small style="color: #94a3b8;">Activity Logs</small>
+                            <strong style="display: block; font-size: 1.2rem;"><?= $totalLogs ?></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Quick Actions -->
         <div class="glass-box">
-            <h2>System Control Overview</h2>
-            <p style="color:var(--text-muted); margin-top:10px;">Monitor all administrative actions and manage high-level system permissions.</p>
+            <div class="section-header">
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <a href="?view=manage_admins" class="btn btn-primary" style="justify-content: center; padding: 12px;">
+                    <i class="fas fa-user-plus"></i> Add New Admin
+                </a>
+                <a href="?view=logs" class="btn btn-info" style="justify-content: center; padding: 12px; background: #eff6ff; color: #2563eb;">
+                    <i class="fas fa-list-ul"></i> View Activity Logs
+                </a>
+                <a href="?view=archived_admins" class="btn btn-warning" style="justify-content: center; padding: 12px;">
+                    <i class="fas fa-trash-restore"></i> Manage Archived
+                </a>
+            </div>
         </div>
 
     <?php elseif ($view === 'manage_admins'): ?>
@@ -207,10 +315,10 @@ $logs = $logStmt->fetchAll();
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Email</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Status</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b;">Action</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Name</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email</th>
+                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Status</th>
+                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -219,7 +327,9 @@ $logs = $logStmt->fetchAll();
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;"><?= htmlspecialchars($al['firstname'].' '.$al['lastname']) ?></td>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;"><?= htmlspecialchars($al['email']) ?></td>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="color: var(--danger); font-weight: 700; font-size: 0.75rem; background: #fef2f2; padding: 4px 10px; border-radius: 20px;">ARCHIVED</span>
+                                <span style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;">
+                                    <i class="fas fa-ban"></i> ARCHIVED
+                                </span>
                             </td>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; text-align: right;">
                                 <button class="btn btn-success openRestoreModal" data-id="<?= $al['id'] ?>">
@@ -252,7 +362,7 @@ $logs = $logStmt->fetchAll();
                     </thead>
                     <tbody>
                         <?php if (empty($logs)): ?>
-                            <tr><td colspan="4" style="text-align:center; padding: 40px;">No activity logs found on this page.<?php echo '</td>'; ?></td>95
+                            <tr><td colspan="4" style="text-align:center; padding: 40px;">No activity logs found on this page.<?php echo '</td>'; ?> noi
                         <?php else: ?>
                             <?php foreach($logs as $l): ?>
                             <tr>
@@ -387,21 +497,15 @@ $logs = $logStmt->fetchAll();
         if (event.target.classList.contains('modal')) closeModals(); 
     }
 
-    // ============================================
-    // PREVENT BACK BUTTON AFTER LOGOUT
-    // ============================================
     
-    // Detect pageshow event (when page loads from cache/back button)
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
             window.location.reload();
         }
     });
     
-    // Push a new state to history
     history.pushState(null, null, location.href);
     
-    // Listen for popstate event (back/forward buttons)
     window.addEventListener('popstate', function() {
         window.location.reload();
     });
