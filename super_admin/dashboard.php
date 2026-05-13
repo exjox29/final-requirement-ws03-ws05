@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
@@ -80,6 +79,7 @@ $logs = $logStmt->fetchAll();
         
         .sidebar { width: 260px; background: var(--sidebar); position: fixed; height: 100vh; color: white; padding: 20px; z-index: 1000; }
         .sidebar-brand { margin-bottom: 35px; font-weight: 800; font-size: 1.4rem; display:flex; align-items:center; gap:10px; }
+        .sidebar-brand i { color: var(--primary); }
         .nav-link { 
             display: flex; align-items: center; padding: 12px; color: #94a3b8; text-decoration: none; 
             border-radius: 8px; margin-bottom: 5px; transition: 0.3s; background: transparent; border: none; width: 100%; cursor: pointer;
@@ -112,7 +112,6 @@ $logs = $logStmt->fetchAll();
         
         input, select { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #e2e8f0; border-radius: 10px; }
         
-        /* Two Column Layout */
         .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
         .activity-list { list-style: none; }
         .activity-list li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
@@ -125,7 +124,6 @@ $logs = $logStmt->fetchAll();
         .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; text-align: center; }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .two-columns { grid-template-columns: 1fr; gap: 20px; }
         }
@@ -134,7 +132,9 @@ $logs = $logStmt->fetchAll();
 <body>
 
 <aside class="sidebar">
-    <div class="sidebar-brand"><i class="fas fa-shield-halved" style="color:var(--primary)"></i> Admin<span>OS</span></div>
+    <div class="sidebar-brand">
+        <i class="fas fa-microchip"></i> TECH<span style="color:var(--primary)">STORE</span>
+    </div>
     
     <a href="?view=home" class="nav-link <?= $view=='home'?'active':'' ?>"><i class="fas fa-chart-pie"></i> &nbsp; Dashboard</a>
     <a href="?view=manage_admins" class="nav-link <?= $view=='manage_admins'?'active':'' ?>"><i class="fas fa-user-shield"></i> &nbsp; Manage Admins</a>
@@ -157,7 +157,6 @@ $logs = $logStmt->fetchAll();
     <?php endif; ?>
 
     <?php if ($view === 'home'): ?>
-        <!-- Row 1: Main Stats Cards (4 cards) -->
         <div class="grid-stats">
             <div class="stat-card">
                 <h3><i class="fas fa-user-shield"></i> Active Admins</h3>
@@ -182,7 +181,6 @@ $logs = $logStmt->fetchAll();
         </div>
 
         <div class="two-columns">
-            <!-- Recent Activities Column -->
             <div class="glass-box">
                 <div class="section-header">
                     <h3><i class="fas fa-history"></i> Recent Activities</h3>
@@ -212,7 +210,6 @@ $logs = $logStmt->fetchAll();
                 <?php endif; ?>
             </div>
 
-            <!-- System Overview Column -->
             <div class="glass-box">
                 <div class="section-header">
                     <h3><i class="fas fa-chart-line"></i> System Overview</h3>
@@ -245,7 +242,6 @@ $logs = $logStmt->fetchAll();
             </div>
         </div>
 
-        <!-- Row 3: Quick Actions -->
         <div class="glass-box">
             <div class="section-header">
                 <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
@@ -290,7 +286,7 @@ $logs = $logStmt->fetchAll();
                     </thead>
                     <tbody>
                         <?php foreach($admins as $a): ?>
-                        <tr>
+                        </table>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;"><?= htmlspecialchars($a['firstname'].' '.$a['lastname']) ?></td>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;"><?= htmlspecialchars($a['email']) ?></td>
                             <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
@@ -422,7 +418,6 @@ $logs = $logStmt->fetchAll();
     <?php endif; ?>
 </main>
 
-<!-- RESET MODAL -->
 <div id="resetModal" class="modal">
     <div class="modal-content">
         <h3>Reset Password</h3>
@@ -441,7 +436,6 @@ $logs = $logStmt->fetchAll();
     </div>
 </div>
 
-<!-- ARCHIVE MODAL -->
 <div id="archiveModal" class="modal">
     <div class="modal-content">
         <i class="fas fa-exclamation-triangle" style="font-size:2rem; color:var(--danger)"></i>
@@ -454,7 +448,6 @@ $logs = $logStmt->fetchAll();
     </div>
 </div>
 
-<!-- RESTORE MODAL -->
 <div id="restoreModal" class="modal">
     <div class="modal-content">
         <h3>Restore Account?</h3>
@@ -496,6 +489,7 @@ $logs = $logStmt->fetchAll();
     window.onclick = (event) => { 
         if (event.target.classList.contains('modal')) closeModals(); 
     }
+
 
     
     window.addEventListener('pageshow', function(event) {
