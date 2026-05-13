@@ -14,6 +14,14 @@ $totalLogs = $pdo->query("SELECT COUNT(*) FROM activity_logs")->fetchColumn();
 $totalRegularUsers = $pdo->query("SELECT COUNT(*) FROM users WHERE role_id = 3 AND status = 'active'")->fetchColumn();
 $recentActivities = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 5")->fetchAll();
 
+$pageTitles = [
+    'home' => 'Dashboard',
+    'manage_admins' => 'Manage Admins',
+    'logs' => 'Activity Logs',
+    'archived_admins' => 'Archived Admins'
+];
+$pageTitle = $pageTitles[$view] ?? 'Dashboard';
+
 if (isset($_POST['reset_pw'])) {
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) { die("CSRF validation failed!"); }
     $id = $_POST['user_id'];
@@ -69,7 +77,7 @@ $logs = $logStmt->fetchAll();
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Super Admin | System Control</title>
+    <title>Super Admin | <?= $pageTitle ?> | TechStore</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -88,6 +96,13 @@ $logs = $logStmt->fetchAll();
         .nav-link.active { background: var(--primary); }
         
         .main { flex: 1; margin-left: 260px; padding: 40px; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .page-header h1 { font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0; }
+        .user-badge { display: flex; align-items: center; gap: 12px; background: white; padding: 8px 20px 8px 12px; border-radius: 40px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .user-badge i { font-size: 1.2rem; color: var(--primary); }
+        .user-badge span { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+        
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-bottom: 4px solid #e2e8f0; transition: 0.2s; }
         .stat-card:hover { transform: translateY(-3px); border-bottom-color: var(--primary); }
@@ -126,6 +141,7 @@ $logs = $logStmt->fetchAll();
         
         @media (max-width: 768px) {
             .two-columns { grid-template-columns: 1fr; gap: 20px; }
+            .page-header { flex-direction: column; gap: 15px; align-items: flex-start; }
         }
     </style>
 </head>
@@ -145,9 +161,12 @@ $logs = $logStmt->fetchAll();
 </aside>
 
 <main class="main">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-        <h1 style="font-weight:800;"><?= ucwords(str_replace('_', ' ', $view)) ?></h1>
-        <div style="font-weight:600; color:var(--text-muted)">Super Admin: <?= htmlspecialchars($_SESSION['name']) ?></div>
+    <div class="page-header">
+        <h1><?= $pageTitle ?></h1>
+        <div class="user-badge">
+            <i class="fas fa-user-circle"></i>
+            <span><?= htmlspecialchars($_SESSION['name']) ?> (Super Admin)</span>
+        </div>
     </div>
 
     <?php if($message || isset($_GET['msg'])): ?>
@@ -261,44 +280,66 @@ $logs = $logStmt->fetchAll();
 
     <?php elseif ($view === 'manage_admins'): ?>
         <div class="glass-box">
-            <h3>Register New Admin</h3><br>
+            <h3><i class="fas fa-user-plus"></i> Register New Admin</h3><br>
             <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                 <input type="text" name="firstname" placeholder="First Name" required>
                 <input type="text" name="lastname" placeholder="Last Name" required>
                 <input type="email" name="email" placeholder="Email" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <button type="submit" name="add_admin" class="btn btn-primary" style="height:48px; margin-top:8px;">Create Admin</button>
+                <button type="submit" name="add_admin" class="btn btn-primary" style="height:48px; margin-top:8px;">
+                    <i class="fas fa-user-check"></i> Create Admin
+                </button>
             </form>
         </div>
 
         <div class="glass-box">
-            <h3>Active Administrators</h3>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <h3><i class="fas fa-users"></i> Active Administrators</h3>
+            <div style="overflow-x: auto; border-radius: 16px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Security</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">#</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Name</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Email</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Security</th>
+                            <th style="text-align: right; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($admins as $a): ?>
-                        </table>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;"><?= htmlspecialchars($a['firstname'].' '.$a['lastname']) ?></td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;"><?= htmlspecialchars($a['email']) ?></td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <button type="button" class="btn btn-warning openResetModal" data-id="<?= $a['id'] ?>" data-name="<?= htmlspecialchars($a['firstname']) ?>">
-                                    <i class="fas fa-key"></i> Reset
-                                </button>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; text-align: right;">
-                                <button class="btn btn-danger openArchiveModal" data-id="<?= $a['id'] ?>"><i class="fas fa-archive"></i> Archive</button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if(empty($admins)): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                                    <i class="fas fa-user-slash" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                    No administrators found.
+                                </table>
+                            </tr>
+                        <?php else: ?>
+                            <?php $admin_counter = 1; ?>
+                            <?php foreach($admins as $a): ?>
+                            <tr>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #64748b; width: 50px;"><?= $admin_counter++ ?></td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-weight: 600;">
+                                    <i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($a['firstname'].' '.$a['lastname']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <i class="fas fa-envelope" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($a['email']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <button class="btn btn-warning openResetModal" data-id="<?= $a['id'] ?>" data-name="<?= htmlspecialchars($a['firstname']) ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #fffbeb; color: #f59e0b;">
+                                        <i class="fas fa-key"></i> Reset
+                                    </button>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; text-align: right;">
+                                    <button class="btn btn-danger openArchiveModal" data-id="<?= $a['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #fef2f2; color: #ef4444;">
+                                        <i class="fas fa-archive"></i> Archive
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -306,34 +347,52 @@ $logs = $logStmt->fetchAll();
 
     <?php elseif ($view === 'archived_admins'): ?>
         <div class="glass-box">
-            <h3>Archived Administrator Accounts</h3>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <h3><i class="fas fa-user-slash"></i> Archived Administrator Accounts</h3>
+            <div style="overflow-x: auto; border-radius: 16px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Status</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">#</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Name</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Email</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Status</th>
+                            <th style="text-align: right; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($archived_list as $al): ?>
-                        <tr>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600;"><?= htmlspecialchars($al['firstname'].' '.$al['lastname']) ?></td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;"><?= htmlspecialchars($al['email']) ?></td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
-                                <span style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;">
-                                    <i class="fas fa-ban"></i> ARCHIVED
-                                </span>
-                            </td>
-                            <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; text-align: right;">
-                                <button class="btn btn-success openRestoreModal" data-id="<?= $al['id'] ?>">
-                                    <i class="fas fa-undo"></i> Restore
-                                </button>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if(empty($archived_list)): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                                    <i class="fas fa-user-check" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                    No archived administrators found.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php $archived_counter = 1; ?>
+                            <?php foreach($archived_list as $al): ?>
+                            <tr>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #64748b; width: 50px;"><?= $archived_counter++ ?></td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-weight: 600;">
+                                    <i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($al['firstname'].' '.$al['lastname']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <i class="fas fa-envelope" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($al['email']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <span style="background: #fef2f2; color: #dc2626; padding: 6px 14px; border-radius: 30px; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-ban"></i> ARCHIVED
+                                    </span>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; text-align: right;">
+                                    <button class="btn btn-success openRestoreModal" data-id="<?= $al['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #f0fdf4; color: #166534;">
+                                        <i class="fas fa-undo"></i> Restore
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -342,34 +401,37 @@ $logs = $logStmt->fetchAll();
     <?php elseif ($view === 'logs'): ?>
         <div class="glass-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                <h3>Activity Logs</h3>
+                <h3><i class="fas fa-list-ul"></i> Activity Logs</h3>
                 <span style="font-size: 0.8rem; color: var(--text-muted);">Showing Page <?= $page ?></span>
             </div>
             
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div style="overflow-x: auto; border-radius: 16px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Timestamp</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">User</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Action Details</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Category</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Timestamp</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">User</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Action Details</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Category</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($logs)): ?>
-                            <tr><td colspan="4" style="text-align:center; padding: 40px;">No activity logs found on this page.<?php echo '</td>'; ?> noi
+                            <tr><td colspan="4" style="text-align:center; padding: 60px 20px; color: #94a3b8;">
+                                <i class="fas fa-file-alt" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                No activity logs found.
+                            </table>
                         <?php else: ?>
                             <?php foreach($logs as $l): ?>
                             <tr>
-                                <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem;">
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-size: 0.85rem;">
                                     <i class="far fa-clock"></i> <?= date('M d, Y • h:i A', strtotime($l['created_at'])) ?>
                                 </td>
-                                <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
                                     <strong><?= htmlspecialchars(($l['firstname'] ?? 'Sys') . ' ' . ($l['lastname'] ?? '')) ?></strong>
                                 </td>
-                                <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;"><?= htmlspecialchars($l['action_details']) ?></td>
-                                <td style="padding: 15px 12px; border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;"><?= htmlspecialchars($l['action_details']) ?></td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
                                     <span style="font-size:0.7rem; padding: 4px 10px; border-radius: 20px; font-weight:800; 
                                         background: <?= $l['action_type']=='Security' ? '#fff1f2' : '#eff6ff' ?>; 
                                         color: <?= $l['action_type']=='Security' ? '#be123c' : '#1d4ed8' ?>;">
@@ -490,8 +552,6 @@ $logs = $logStmt->fetchAll();
         if (event.target.classList.contains('modal')) closeModals(); 
     }
 
-
-    
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
             window.location.reload();
