@@ -1,6 +1,4 @@
 <?php
-
-
 session_start();
 require dirname(__DIR__) . '/includes/config.php';
 
@@ -436,7 +434,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
                             <td style="text-align: right;">
                                 <a href="?approve=<?= $p['public_id'] ?>" class="btn btn-primary" style="margin-right: 5px;">Approve</a>
                                 <a href="?reject=<?= $p['public_id'] ?>" class="btn btn-danger">Reject</a>
-                            <td>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -485,7 +483,7 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
     <?php elseif($currentPage == 'all_users'): ?>
         <div class="glass-box">
             <div class="section-header">
-                <h3>Register New User</h3>
+                <h3><i class="fas fa-user-plus"></i> Register New User</h3>
             </div>
             <form method="POST" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
@@ -493,40 +491,63 @@ $low_stock_items = $pdo->query("SELECT * FROM items WHERE stock_quantity <= 5 AN
                 <input type="text" name="lastname" placeholder="Last Name" required>
                 <input type="email" name="email" placeholder="Email" required>
                 <input type="password" name="password" placeholder="Password" required>
-                <button type="submit" name="add_user" class="btn btn-primary" style="height:48px; margin-top:8px;">Create User</button>
+                <button type="submit" name="add_user" class="btn btn-primary" style="height:48px; margin-top:8px;">
+                    <i class="fas fa-user-check"></i> Create User
+                </button>
             </form>
         </div>
+        
         <div class="glass-box">
             <div class="section-header">
-                <h3>Active Regular Users</h3>
+                <h3><i class="fas fa-users"></i> Active Regular Users</h3>
             </div>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div style="overflow-x: auto; border-radius: 16px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Name</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Email</th>
-                            <th style="text-align: left; padding: 12px; background: #f8fafc;">Reset Password</th>
-                            <th style="text-align: right; padding: 12px; background: #f8fafc;">Action</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">#</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Full Name</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Email Address</th>
+                            <th style="text-align: left; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Reset Password</th>
+                            <th style="text-align: right; padding: 16px 20px; background: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; font-weight: 700; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($users as $u): ?>
-                        <tr>
-                            <td><i class="fas fa-user" style="color:#94a3b8; margin-right: 8px;"></i><?= htmlspecialchars($u['firstname'].' '.$u['lastname']) ?></td>
-                            <td><i class="fas fa-envelope" style="color:#94a3b8; margin-right: 8px;"></i><?= $u['email'] ?></td>
-                            <td>
-                                <button class="btn btn-warning" onclick="openResetModal('<?= $u['id'] ?>', '<?= htmlspecialchars($u['firstname']) ?>')">
-                                    <i class="fas fa-key"></i> Reset
-                                </button>
-                            </td>
-                            <td style="text-align: right;">
-                                <button class="btn btn-danger openArchiveModal" data-type="user" data-id="<?= $u['id'] ?>">
-                                    <i class="fas fa-archive"></i> Archive
-                                </button>
-                            </td>
-                        </table>
-                        <?php endforeach; ?>
+                        <?php if(empty($users)): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                                    <i class="fas fa-user-slash" style="font-size: 2.5rem; margin-bottom: 12px; display: block; color: #cbd5e1;"></i>
+                                    No registered users found.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php $user_counter = 1; ?>
+                            <?php foreach($users as $u): ?>
+                            <tr>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #64748b; width: 50px;">
+                                    <?= $user_counter++ ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-weight: 600;">
+                                    <i class="fas fa-user-circle" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($u['firstname'].' '.$u['lastname']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <i class="fas fa-envelope" style="color: #94a3b8; margin-right: 10px;"></i>
+                                    <?= htmlspecialchars($u['email']) ?>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;">
+                                    <button class="btn btn-warning" onclick="openResetModal('<?= $u['id'] ?>', '<?= htmlspecialchars($u['firstname']) ?>')" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #fffbeb; color: #f59e0b;">
+                                        <i class="fas fa-key"></i> Reset
+                                    </button>
+                                </td>
+                                <td style="padding: 18px 20px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; text-align: right;">
+                                    <button class="btn btn-danger openArchiveModal" data-type="user" data-id="<?= $u['id'] ?>" style="padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: #fef2f2; color: #ef4444;">
+                                        <i class="fas fa-archive"></i> Archive
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
